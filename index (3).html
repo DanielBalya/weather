@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Időjárás Állomás</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --card-bg: rgba(23, 28, 41, 0.9);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent-temp: #f87171;
+            --accent-hum: #38bdf8;
+            --accent-press: #fbbf24;
+            --accent-gas: #4ade80;
+            --primary: #6366f1;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header { text-align: center; margin: 10px 0; }
+        h1 { font-weight: 600; font-size: 1.3rem; margin: 0; }
+
+        /* Szűrő sáv */
+        .filter-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: var(--card-bg);
+            padding: 5px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Élő adatok sáv */
+        .live-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 768px) { .live-stats { grid-template-columns: repeat(4, 1fr); } }
+
+        .stat-item {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .stat-value { font-size: 1.4rem; font-weight: 600; display: block; margin-top: 4px; }
+        .stat-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.2px; }
+
+        /* 2x2 Grafikon rács */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr; 
+            gap: 15px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        @media (min-width: 650px) {
+            .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 { 
+            font-size: 0.75rem; 
+            font-weight: 600; 
+            color: var(--text-dim); 
+            margin: 0 0 15px 0; 
+            text-transform: uppercase; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .month-display {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .canvas-container { position: relative; height: 220px; width: 100%; }
+    </style>
+</head>
+<body>
+
+    <div class="header"><h1>BME680 Állomás</h1></div>
+
+    <div class="live-stats">
+        <div class="stat-item"><span class="stat-label">Hőmérséklet</span><span id="top-temp" class="stat-value" style="color:var(--accent-temp)">--</span></div>
+        <div class="stat-item"><span class="stat-label">Páratartalom</span><span id="top-hum" class="stat-value" style="color:var(--accent-hum)">--</span></div>
+        <div class="stat-item"><span class="stat-label">Nyomás</span><span id="top-press" class="stat-value" style="color:var(--accent-press)">--</span></div>
+        <div class="stat-item"><span class="stat-label">Gáz</span><span id="top-gas" class="stat-value" style="color:var(--accent-gas)">--</span></div>
+    </div>
+
+    <div class="filter-container">
+        <button class="filter-btn active" onclick="setFilter('all', this)">Összes</button>
+        <button class="filter-btn" onclick="setFilter('monthly', this)">Havi nézet</button>
+        <button class="filter-btn" onclick="setFilter('weekly', this)">7 nap</button>
+        <button class="filter-btn" onclick="setFilter('today', this)">Ma</button>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="chart-card"><h2>Hőmérséklet <span class="month-display" id="month-temp"></span></h2><div class="canvas-container"><canvas id="tempChart"></canvas></div></div>
+        <div class="chart-card"><h2>Páratartalom <span class="month-display" id="month-hum"></span></h2><div class="canvas-container"><canvas id="humChart"></canvas></div></div>
+        <div class="chart-card"><h2>Légnyomás <span class="month-display" id="month-press"></span></h2><div class="canvas-container"><canvas id="pressChart"></canvas></div></div>
+        <div class="chart-card"><h2>Gázellenállás <span class="month-display" id="month-gas"></span></h2><div class="canvas-container"><canvas id="gasChart"></canvas></div></div>
+    </div>
+
+    <script>
+        const monthNames = ["Január", "Február", "Március", "Április", "Május", "Június", "Július", "Augusztus", "Szeptember", "Október", "November", "December"];
+        let charts = {};
+        let fullData = null;
+        let currentFilter = 'all';
+
+        async function fetchData() {
+            try {
+                const r = await fetch("/api/data");
+                const data = await r.json();
+                fullData = {
+                    timestamps: data.timestamps.reverse(),
+                    temp: data.temperature.reverse(),
+                    hum: data.humidity.reverse(),
+                    press: data.pressure.reverse(),
+                    gas: data.gas.reverse()
+                };
+                updateDashboard();
+            } catch (e) { console.error("Hiba az adatok letöltésekor", e); }
+        }
+
+        function setFilter(type, btn) {
+            currentFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            if (!fullData) return;
+            const len = fullData.temp.length;
+
+            // Élő adatok frissítése
+            document.getElementById('top-temp').innerText = fullData.temp[len-1].toFixed(1) + "°C";
+            document.getElementById('top-hum').innerText = fullData.hum[len-1].toFixed(1) + "%";
+            document.getElementById('top-press').innerText = Math.round(fullData.press[len-1]) + " hPa";
+            document.getElementById('top-gas').innerText = Math.round(fullData.gas[len-1] / 1000) + " kΩ";
+
+            let labels, tempArr, humArr, pressArr, gasArr;
+            let currentMonthName = "";
+
+            if (currentFilter === 'monthly') {
+                // Csak az aktuális hónap szűrése és napi átlagolás
+                const latestDate = new Date(fullData.timestamps[len-1]);
+                const targetMonth = latestDate.getMonth();
+                const targetYear = latestDate.getFullYear();
+                currentMonthName = monthNames[targetMonth];
+
+                const dailyData = {};
+                fullData.timestamps.forEach((ts, i) => {
+                    const d = new Date(ts);
+                    if (d.getMonth() === targetMonth && d.getFullYear() === targetYear) {
+                        const day = d.getDate();
+                        if (!dailyData[day]) dailyData[day] = { temp:[], hum:[], press:[], gas:[] };
+                        dailyData[day].temp.push(fullData.temp[i]);
+                        dailyData[day].hum.push(fullData.hum[i]);
+                        dailyData[day].press.push(fullData.press[i]);
+                        dailyData[day].gas.push(fullData.gas[i]);
+                    }
+                });
+
+                labels = Object.keys(dailyData).map(day => day + ". nap");
+                tempArr = Object.values(dailyData).map(v => v.temp.reduce((a,b)=>a+b)/v.temp.length);
+                humArr = Object.values(dailyData).map(v => v.hum.reduce((a,b)=>a+b)/v.hum.length);
+                pressArr = Object.values(dailyData).map(v => v.press.reduce((a,b)=>a+b)/v.press.length);
+                gasArr = Object.values(dailyData).map(v => v.gas.reduce((a,b)=>a+b)/v.gas.length);
+
+            } else {
+                const slice = currentFilter === 'today' ? 24 : (currentFilter === 'weekly' ? 168 : len);
+                labels = fullData.timestamps.slice(-slice).map(ts => ts.split(' ')[1].substring(0, 5));
+                tempArr = fullData.temp.slice(-slice);
+                humArr = fullData.hum.slice(-slice);
+                pressArr = fullData.press.slice(-slice);
+                gasArr = fullData.gas.slice(-slice);
+                currentMonthName = currentFilter === 'all' ? "Mind" : "Élő";
+            }
+
+            // Hónap felirat frissítése a grafikon tetején
+            document.querySelectorAll('.month-display').forEach(el => el.innerText = currentMonthName);
+
+            renderChart("tempChart", labels, tempArr, '#f87171');
+            renderChart("humChart", labels, humArr, '#38bdf8');
+            renderChart("pressChart", labels, pressArr, '#fbbf24');
+            renderChart("gasChart", labels, gasArr, '#4ade80');
+        }
+
+        function renderChart(id, labels, data, color) {
+            if (charts[id]) charts[id].destroy();
+            const ctx = document.getElementById(id).getContext('2d');
+            const grad = ctx.createLinearGradient(0, 0, 0, 200);
+            grad.addColorStop(0, color.replace('1)', '0.2)'));
+            grad.addColorStop(1, 'transparent');
+
+            charts[id] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        borderColor: color,
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointRadius: currentFilter === 'monthly' ? 4 : 0,
+                        fill: true,
+                        backgroundColor: grad
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { 
+                            grid: { display: false },
+                            ticks: { color: '#64748b', font: { size: 10 } }
+                        },
+                        y: { 
+                            grid: { color: 'rgba(255,255,255,0.03)' },
+                            ticks: { color: '#64748b', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        fetchData();
+        setInterval(fetchData, 60000);
+    </script>
+</body>
+</html>
