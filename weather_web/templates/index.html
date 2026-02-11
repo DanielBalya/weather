@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Időjárás állomás – Élő adatok</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body style="font-family: Arial; margin: 20px;">
+    <h1>Raspberry Pi – Időjárás állomás</h1>
+    <p>Automatikusan frissülő grafikonok a BME680 adataiból.</p>
+
+    <h2>Hőmérséklet (°C)</h2>
+    <canvas id="tempChart"></canvas>
+
+    <h2>Páratartalom (%)</h2>
+    <canvas id="humChart"></canvas>
+
+    <h2>Légnyomás (hPa)</h2>
+    <canvas id="pressChart"></canvas>
+
+    <script>
+        async function loadData() {
+            const r = await fetch("/api/data");
+            return await r.json();
+        }
+
+        async function renderCharts() {
+            const data = await loadData();
+
+            new Chart(document.getElementById("tempChart"), {
+                type: 'line',
+                data: {
+                    labels: data.timestamps.reverse(),
+                    datasets: [{
+                        label: "Hőmérséklet (°C)",
+                        data: data.temperature.reverse(),
+                        borderWidth: 2,
+                        tension: 0.2
+                    }]
+                }
+            });
+
+            new Chart(document.getElementById("humChart"), {
+                type: 'line',
+                data: {
+                    labels: data.timestamps.reverse(),
+                    datasets: [{
+                        label: "Páratartalom (%)",
+                        data: data.humidity.reverse(),
+                        borderWidth: 2,
+                        tension: 0.2
+                    }]
+                }
+            });
+
+            new Chart(document.getElementById("pressChart"), {
+                type: 'line',
+                data: {
+                    labels: data.timestamps.reverse(),
+                    datasets: [{
+                        label: "Nyomás (hPa)",
+                        data: data.pressure.reverse(),
+                        borderWidth: 2,
+                        tension: 0.2
+                    }]
+                }
+            });
+        }
+
+        renderCharts();
+    </script>
+
+</body>
+</html>
