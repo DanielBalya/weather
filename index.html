@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Weather Station</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --card-bg: rgba(23, 28, 41, 0.9);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent-temp: #f87171;
+            --accent-hum: #38bdf8;
+            --accent-press: #fbbf24;
+            --accent-gas: #4ade80;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header { text-align: center; margin: 10px 0 20px 0; }
+        h1 { font-weight: 600; letter-spacing: -1px; margin: 0; font-size: 1.4rem; color: var(--text-main); }
+
+        /* Top Live Stats Bar */
+        .live-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .live-stats { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        .stat-item {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .stat-value { font-size: 1.4rem; font-weight: 600; display: block; margin-top: 5px; }
+        .stat-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; }
+
+        /* 2x2 Chart Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr; 
+            gap: 15px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        @media (min-width: 650px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+            }
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 { 
+            font-size: 0.85rem; 
+            font-weight: 400; 
+            color: var(--text-dim); 
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .canvas-container {
+            position: relative;
+            height: 180px; 
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Raspberry Pi Weather Station</h1>
+    </div>
+
+    <div class="live-stats">
+        <div class="stat-item">
+            <span class="stat-label">Temperature</span>
+            <span id="top-temp" class="stat-value" style="color:var(--accent-temp)">--</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Humidity</span>
+            <span id="top-hum" class="stat-value" style="color:var(--accent-hum)">--</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Pressure</span>
+            <span id="top-press" class="stat-value" style="color:var(--accent-press)">--</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Gas / AQI</span>
+            <span id="top-gas" class="stat-value" style="color:var(--accent-gas)">--</span>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="chart-card">
+            <h2>Hőmérséklet Trend (°C)</h2>
+            <div class="canvas-container"><canvas id="tempChart"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+            <h2>Páratartalom Trend (%)</h2>
+            <div class="canvas-container"><canvas id="humChart"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+            <h2>Légnyomás (hPa)</h2>
+            <div class="canvas-container"><canvas id="pressChart"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+            <h2>Gázellenállás (kΩ)</h2>
+            <div class="canvas-container"><canvas id="gasChart"></canvas></div>
+        </div>
+    </div>
+
+    <script>
+        let charts = {};
+
+        async function updateDashboard() {
+            try {
+                const r = await fetch("/api/data");
+                const data = await r.json();
+
+                // Unpack and reverse data
+                const labels = data.timestamps.reverse();
+                const temps = data.temperature.reverse();
+                const hums = data.humidity.reverse();
+                const press = data.pressure.reverse();
+                const gas = data.gas.reverse();
+
+                // Update Top Stats Bar
+                document.getElementById('top-temp').innerText = temps[temps.length-1].toFixed(1) + "°C";
+                document.getElementById('top-hum').innerText = hums[hums.length-1].toFixed(1) + "%";
+                document.getElementById('top-press').innerText = Math.round(press[press.length-1]) + " hPa";
+                document.getElementById('top-gas').innerText = Math.round(gas[gas.length-1] / 1000) + " kΩ";
+
+                // Update Charts
+                renderLineChart("tempChart", temps, '#f87171');
+                renderLineChart("humChart", hums, '#38bdf8');
+                renderLineChart("pressChart", press, '#fbbf24');
+                renderLineChart("gasChart", gas, '#4ade80');
+
+            } catch (e) { console.error("Update failed", e); }
+        }
+
+        function renderLineChart(id, dataset, color) {
+            if (charts[id]) charts[id].destroy(); 
+
+            const ctx = document.getElementById(id).getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+            gradient.addColorStop(0, color.replace('1)', '0.15)'));
+            gradient.addColorStop(1, 'transparent');
+
+            charts[id] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: new Array(dataset.length).fill(''), // Cleaner look without X-labels
+                    datasets: [{
+                        data: dataset,
+                        borderColor: color,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        fill: true,
+                        backgroundColor: gradient
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false },
+                            ticks: { color: '#64748b', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        updateDashboard();
+        setInterval(updateDashboard, 60000); // Auto-refresh every 60s
+    </script>
+</body>
+</html>
