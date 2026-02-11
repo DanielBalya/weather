@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Weather Station</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --card-bg: rgba(23, 28, 41, 0.9);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent-temp: #f87171;
+            --accent-hum: #38bdf8;
+            --accent-press: #fbbf24;
+            --accent-gas: #4ade80;
+            --primary: #6366f1;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header { text-align: center; margin: 10px 0; }
+        h1 { font-weight: 600; font-size: 1.3rem; margin: 0; }
+
+        /* Time Filter Bar */
+        .filter-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: var(--card-bg);
+            padding: 5px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Top Live Stats Bar */
+        .live-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 768px) { .live-stats { grid-template-columns: repeat(4, 1fr); } }
+
+        .stat-item {
+            background: var(--card-bg);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .stat-value { font-size: 1.2rem; font-weight: 600; display: block; }
+        .stat-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* 2x2 Chart Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr; 
+            gap: 12px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        @media (min-width: 650px) {
+            .dashboard-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 15px;
+        }
+
+        h2 { font-size: 0.8rem; font-weight: 400; color: var(--text-dim); margin: 0 0 10px 0; text-transform: uppercase; }
+
+        .canvas-container { position: relative; height: 160px; width: 100%; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>BME680 Intelligence</h1>
+    </div>
+
+    <div class="live-stats">
+        <div class="stat-item"><span class="stat-label">Temperature</span><span id="top-temp" class="stat-value" style="color:var(--accent-temp)">--</span></div>
+        <div class="stat-item"><span class="stat-label">Humidity</span><span id="top-hum" class="stat-value" style="color:var(--accent-hum)">--</span></div>
+        <div class="stat-item"><span class="stat-label">Pressure</span><span id="top-press" class="stat-value" style="color:var(--accent-press)">--</span></div>
+        <div class="stat-item"><span class="stat-label">Gas</span><span id="top-gas" class="stat-value" style="color:var(--accent-gas)">--</span></div>
+    </div>
+
+    <div class="filter-container">
+        <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+        <button class="filter-btn" onclick="setFilter(30, this)">Monthly</button>
+        <button class="filter-btn" onclick="setFilter(7, this)">Last 7</button>
+        <button class="filter-btn" onclick="setFilter(1, this)">Today</button>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="chart-card"><h2>Hőmérséklet (°C)</h2><div class="canvas-container"><canvas id="tempChart"></canvas></div></div>
+        <div class="chart-card"><h2>Páratartalom (%)</h2><div class="canvas-container"><canvas id="humChart"></canvas></div></div>
+        <div class="chart-card"><h2>Nyomás (hPa)</h2><div class="canvas-container"><canvas id="pressChart"></canvas></div></div>
+        <div class="chart-card"><h2>Gázellenállás (kΩ)</h2><div class="canvas-container"><canvas id="gasChart"></canvas></div></div>
+    </div>
+
+    <script>
+        let charts = {};
+        let rawData = null; // Stores the full fetched data
+        let currentFilter = 'all';
+
+        async function fetchData() {
+            try {
+                const r = await fetch("/api/data");
+                const data = await r.json();
+                // Data from Flask
+                rawData = {
+                    labels: data.timestamps.reverse(),
+                    temp: data.temperature.reverse(),
+                    hum: data.humidity.reverse(),
+                    press: data.pressure.reverse(),
+                    gas: data.gas.reverse()
+                };
+                updateUI();
+            } catch (e) { console.error("Fetch error", e); }
+        }
+
+        function setFilter(type, btn) {
+            currentFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateUI();
+        }
+
+        function updateUI() {
+            if (!rawData) return;
+
+            // Live Values (Always the absolute latest)
+            const len = rawData.temp.length;
+            document.getElementById('top-temp').innerText = rawData.temp[len-1].toFixed(1) + "°C";
+            document.getElementById('top-hum').innerText = rawData.hum[len-1].toFixed(1) + "%";
+            document.getElementById('top-press').innerText = Math.round(rawData.press[len-1]) + " hPa";
+            document.getElementById('top-gas').innerText = Math.round(rawData.gas[len-1] / 1000) + " kΩ";
+
+            // Slicing Data based on filter
+            let sliceCount = rawData.labels.length;
+            if (currentFilter === 1) sliceCount = 24;      // Assuming 1 reading/hour
+            else if (currentFilter === 7) sliceCount = 168; 
+            else if (currentFilter === 30) sliceCount = 720;
+
+            const labels = rawData.labels.slice(-sliceCount);
+            const temp = rawData.temp.slice(-sliceCount);
+            const hum = rawData.hum.slice(-sliceCount);
+            const press = rawData.press.slice(-sliceCount);
+            const gas = rawData.gas.slice(-sliceCount);
+
+            renderChart("tempChart", labels, temp, '#f87171');
+            renderChart("humChart", labels, hum, '#38bdf8');
+            renderChart("pressChart", labels, press, '#fbbf24');
+            renderChart("gasChart", labels, gas, '#4ade80');
+        }
+
+        function renderChart(id, labels, data, color) {
+            if (charts[id]) charts[id].destroy();
+            const ctx = document.getElementById(id).getContext('2d');
+            const grad = ctx.createLinearGradient(0, 0, 0, 160);
+            grad.addColorStop(0, color.replace('1)', '0.15)'));
+            grad.addColorStop(1, 'transparent');
+
+            charts[id] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        borderColor: color,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        fill: true,
+                        backgroundColor: grad
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false },
+                            ticks: { color: '#64748b', font: { size: 9 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        fetchData();
+        setInterval(fetchData, 60000);
+    </script>
+</body>
+</html>
