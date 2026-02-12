@@ -1,0 +1,33 @@
+def main():
+    init_db()
+    sensor = init_sensors()
+
+    print("Logger fut")
+
+    try:
+        while True:
+            # Szélmérés (5 mp-ig tart)
+            wind_speed = measure_wind(5)
+
+            # BME680 mérés
+            if sensor.get_sensor_data() and sensor.data.heat_stable:
+                timestamp = time.strftime("%Y-%m-%d %H:%M")
+                temp = sensor.data.temperature
+                hum = sensor.data.humidity
+                pres = sensor.data.pressure
+                sensor.data.gas_resistance 
+                sensor.data.gas_resistance
+                gas = sensor.data.gas_resistance
+                
+                # Esőmérés
+                rain_val = 100 if GPIO.input(RAIN_PIN) == GPIO.LOW else 0
+
+                print(f"{timestamp} | Szél: {wind_speed:.1f} km/h | Eső: {rain_val}%")
+                save_to_db(timestamp, temp, hum, pres, gas, rain_val, wind_speed)
+
+            time.sleep(600) 
+
+    except KeyboardInterrupt:
+        print("Leállítva.")
+    finally:
+        GPIO.cleanup()
