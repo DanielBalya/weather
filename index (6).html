@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DaniSpy Meteo Pro - Összehasonlító</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f000a;
+            --card-bg: rgba(255, 0, 127, 0.05);
+            --primary: #ff007f;
+            --secondary: #00f2ff; /* Kék az API adatoknak, hogy elváljon */
+            --text-main: #fff0f6;
+            --text-dim: #ffb3d9;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0; padding: 10px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        h1 { color: var(--primary); text-shadow: 0 0 10px var(--primary); font-size: 1.4rem; }
+
+        /* Kártyák elrendezése */
+        .live-stats {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px; width: 100%; max-width: 1200px; margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: var(--card-bg); padding: 15px; border-radius: 14px;
+            border: 1px solid rgba(255, 0, 127, 0.2); text-align: center;
+        }
+
+        .label { font-size: 0.6rem; text-transform: uppercase; color: var(--text-dim); display: block; }
+        .val-in { font-size: 1.3rem; font-weight: 600; color: var(--primary); display: block; }
+        .val-out { font-size: 0.9rem; color: var(--secondary); display: block; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; }
+        .delta { font-size: 0.7rem; font-weight: bold; color: #fff; background: rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 5px; margin-top: 5px; display: inline-block; }
+
+        .dashboard-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px; width: 100%; max-width: 1200px;
+        }
+
+        .chart-card { background: var(--card-bg); border-radius: 18px; padding: 15px; border: 1px solid rgba(255, 0, 127, 0.15); }
+        .canvas-container { height: 220px; }
+    </style>
+</head>
+<body>
+
+    <h1>Meteo Összehasonlító</h1>
+    <div id="status" style="font-size: 0.7rem; margin-bottom: 15px;">Frissítés...</div>
+
+    <div class="live-stats">
+        <div class="stat-item">
+            <span class="label">Hőmérséklet</span>
+            <span class="val-in" id="t-in">--°C</span>
+            <span class="val-out" id="t-out">API: --°C</span>
+            <div class="delta" id="t-delta">Δ: --</div>
+        </div>
+        <div class="stat-item">
+            <span class="label">Páratartalom</span>
+            <span class="val-in" id="h-in">--%</span>
+            <span class="val-out" id="h-out">API: --%</span>
+            <div class="delta" id="h-delta">Δ: --</div>
+        </div>
+        <div class="stat-item">
+            <span class="label">Légnyomás</span>
+            <span class="val-in" id="p-in">-- hPa</span>
+            <span class="val-out" id="p-out">API: -- hPa</span>
+            <div class="delta" id="p-delta">Δ: --</div>
+        </div>
+        <div class="stat-item">
+            <span class="label">Helyi Szél / Eső</span>
+            <span class="val-in" id="w-in">-- km/h</span>
+            <span class="val-out" id="r-in">Eső: --%</span>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="chart-card">
+            <span class="label">Hőmérséklet Követés (Bent vs Kint)</span>
+            <div class="canvas-container"><canvas id="tempChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <span class="label">Páratartalom Követés</span>
+            <div class="canvas-container"><canvas id="humChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <span class="label">Gázellenállás (Csak bent)</span>
+            <div class="canvas-container"><canvas id="gasChart"></canvas></div>
+        </div>
+    </div>
+
+    <script>
+        let charts = {};
+
+        async function updateData() {
+            try {
+                const response = await fetch("/api/data"); // A te Flask API-d
+                const data = await response.json();
+                
+                // Utolsó mért adatok (az adatok végén vannak a listában)
+                const lastIdx = data.timestamps.length - 1;
+                const cur = {
+                    ti: data.temperature[lastIdx],
+                    to: data.temp_out[lastIdx],
+                    hi: data.humidity[lastIdx],
+                    ho: data.hum_out[lastIdx],
+                    pi: data.pressure[lastIdx],
+                    po: data.pressure_out[lastIdx],
+                    wi: data.wind_speed[lastIdx],
+                    ri: data.rain[lastIdx]
+                };
+
+                // Élő adatok és Delták frissítése
+                document.getElementById('t-in').innerText = cur.ti.toFixed(1) + "°C";
+                document.getElementById('t-out').innerText = "API: " + cur.to.toFixed(1) + "°C";
+                document.getElementById('t-delta').innerText = "Δ: " + (cur.ti - cur.to).toFixed(1) + "°C";
+
+                document.getElementById('h-in').innerText = cur.hi.toFixed(1) + "%";
+                document.getElementById('h-out').innerText = "API: " + cur.ho.toFixed(1) + "%";
+                document.getElementById('h-delta').innerText = "Δ: " + (cur.hi - cur.ho).toFixed(1) + "%";
+
+                document.getElementById('p-in').innerText = Math.round(cur.pi) + " hPa";
+                document.getElementById('p-out').innerText = "API: " + Math.round(cur.po) + " hPa";
+                document.getElementById('p-delta').innerText = "Δ: " + (cur.pi - cur.po).toFixed(0) + " hPa";
+
+                document.getElementById('w-in').innerText = cur.wi.toFixed(1) + " km/h";
+                document.getElementById('r-in').innerText = "Eső: " + (cur.ri > 0 ? "Van" : "Nincs");
+
+                // Grafikonok frissítése
+                const labels = data.timestamps.map(t => t.split(' ')[1].substring(0,5));
+                
+                renderDoubleChart("tempChart", labels, data.temperature, data.temp_out, "Bent", "Kint (API)", "#ff007f", "#00f2ff");
+                renderDoubleChart("humChart", labels, data.humidity, data.hum_out, "Bent", "Kint (API)", "#ff007f", "#00f2ff");
+                renderSingleChart("gasChart", labels, data.gas.map(g => g/1000), "Gáz (kΩ)", "#ff007f");
+
+            } catch (e) { console.error(e); }
+        }
+
+        function renderDoubleChart(id, labels, d1, d2, l1, l2, c1, c2) {
+            if (charts[id]) charts[id].destroy();
+            charts[id] = new Chart(document.getElementById(id), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: l1, data: d1, borderColor: c1, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+                        { label: l2, data: d2, borderColor: c2, tension: 0.3, pointRadius: 0, borderWidth: 2, borderDash: [5, 5] }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#ffb3d9', size: 10 } } },
+                    scales: { 
+                        x: { ticks: { color: '#666', maxTicksLimit: 6 } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666' } }
+                    }
+                }
+            });
+        }
+
+        function renderSingleChart(id, labels, data, label, color) {
+            if (charts[id]) charts[id].destroy();
+            charts[id] = new Chart(document.getElementById(id), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{ label: label, data: data, borderColor: color, fill: true, backgroundColor: color+'22', tension: 0.3, pointRadius: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        updateData();
+        setInterval(updateData, 60000);
+    </script>
+</body>
+</html>
