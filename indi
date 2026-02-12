@@ -32,22 +32,6 @@
         .header { text-align: center; margin: 10px 0; }
         h1 { font-weight: 600; font-size: 1.3rem; margin: 0; }
 
-        /* Szűrő sáv */
-        .filter-container {
-            display: flex; gap: 5px; margin-bottom: 20px;
-            background: var(--card-bg); padding: 5px; border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .filter-btn {
-            background: transparent; border: none; color: var(--text-dim);
-            padding: 8px 12px; border-radius: 8px; cursor: pointer;
-            font-size: 0.75rem; font-weight: 600; transition: 0.2s;
-        }
-
-        .filter-btn.active { background: var(--primary); color: white; }
-
-        /* Élő statisztikák (6 elem) */
         .live-stats {
             display: grid; grid-template-columns: repeat(2, 1fr);
             gap: 10px; width: 100%; max-width: 1100px; margin-bottom: 20px;
@@ -62,8 +46,22 @@
 
         .stat-value { font-size: 1.1rem; font-weight: 600; display: block; margin-top: 3px; }
         .stat-label { font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+        .delta-val { font-size: 0.65rem; margin-top: 4px; font-weight: bold; display: block; opacity: 0.8; }
 
-        /* Grafikon rács (2-3 oszlopos elrendezés) */
+        .filter-container {
+            display: flex; gap: 5px; margin-bottom: 20px;
+            background: var(--card-bg); padding: 5px; border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .filter-btn {
+            background: transparent; border: none; color: var(--text-dim);
+            padding: 8px 12px; border-radius: 8px; cursor: pointer;
+            font-size: 0.75rem; font-weight: 600; transition: 0.2s;
+        }
+
+        .filter-btn.active { background: var(--primary); color: white; }
+
         .dashboard-grid {
             display: grid; grid-template-columns: 1fr;
             gap: 15px; width: 100%; max-width: 1100px;
@@ -97,8 +95,24 @@
         <div class="stat-item"><span class="stat-label">Pára</span><span id="t-h" class="stat-value" style="color:var(--accent-hum)">--</span></div>
         <div class="stat-item"><span class="stat-label">Nyomás</span><span id="t-p" class="stat-value" style="color:var(--accent-press)">--</span></div>
         <div class="stat-item"><span class="stat-label">Gáz</span><span id="t-g" class="stat-value" style="color:var(--accent-gas)">--</span></div>
-        <div class="stat-item"><span class="stat-label">Időjárás</span><span id="t-r" class="stat-value" style="color:var(--accent-rain)">--</span></div>
-        <div class="stat-item"><span class="stat-label">Szél</span><span id="t-w" class="stat-value" style="color:var(--accent-wind)">--</span></div>
+        <div class="stat-item"><span class="stat-label">Helyi Eső</span><span id="t-r" class="stat-value" style="color:var(--accent-rain)">--</span></div>
+        <div class="stat-item"><span class="stat-label">Helyi Szél</span><span id="t-w" class="stat-value" style="color:var(--accent-wind)">--</span></div>
+        
+        <div class="stat-item">
+            <span class="stat-label">API Hőfok</span><span id="api-t" class="stat-value" style="color:var(--accent-temp)">--</span>
+            <span id="delta-t" class="delta-val" style="color:var(--accent-temp)"></span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">API Pára</span><span id="api-h" class="stat-value" style="color:var(--accent-hum)">--</span>
+            <span id="delta-h" class="delta-val" style="color:var(--accent-hum)"></span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">API Nyomás</span><span id="api-p" class="stat-value" style="color:var(--accent-press)">--</span>
+            <span id="delta-p" class="delta-val" style="color:var(--accent-press)"></span>
+        </div>
+        <div class="stat-item"><span class="stat-label">VOC</span><span class="stat-value" style="color:var(--accent-gas)">STABIL</span></div>
+        <div class="stat-item"><span class="stat-label">API Eső</span><span id="api-r" class="stat-value" style="color:var(--accent-rain)">--</span></div>
+        <div class="stat-item"><span class="stat-label">API Szél</span><span id="api-w" class="stat-value" style="color:var(--accent-wind)">--</span></div>
     </div>
 
     <div class="filter-container">
@@ -135,10 +149,87 @@
                     press: data.pressure.reverse(),
                     gas: data.gas.reverse(),
                     rain: data.rain ? data.rain.reverse() : [],
-                    wind: data.wind_speed ? data.wind_speed.reverse() : []
+                    wind: data.wind_speed ? data.wind_speed.reverse() : [],
+                    api_t: data.temp_out ? data.temp_out.reverse() : [],
+                    api_h: data.hum_out ? data.hum_out.reverse() : [],
+                    api_p: data.pressure_out ? data.pressure_out.reverse() : [],
+                    api_w: data.wind_speed_out ? data.wind_speed_out.reverse() : [],
+                    api_r: data.rain_out ? data.rain_out.reverse() : []
                 };
                 refreshUI();
             } catch (e) { console.error("Hiba az adatokkal", e); }
+        }
+
+        function refreshUI() {
+            if (!rawData) return;
+            const l = rawData.ts.length;
+            const i = l - 1;
+
+            // SZENZOROK
+            document.getElementById('t-t').innerText = rawData.temp[i].toFixed(1) + "°C";
+            document.getElementById('t-h').innerText = rawData.hum[i].toFixed(1) + "%";
+            document.getElementById('t-p').innerText = Math.round(rawData.press[i]) + " hPa";
+            document.getElementById('t-g').innerText = Math.round(rawData.gas[i]/1000) + "k";
+            document.getElementById('t-r').innerText = rawData.rain[i] > 50 ? "🌧️" : "☀️";
+            document.getElementById('t-w').innerText = rawData.wind[i].toFixed(1) + " km/h";
+
+            // API ADATOK
+            if(rawData.api_t[i] !== undefined) {
+                document.getElementById('api-t').innerText = rawData.api_t[i].toFixed(1) + "°C";
+                document.getElementById('api-h').innerText = rawData.api_h[i].toFixed(1) + "%";
+                document.getElementById('api-p').innerText = Math.round(rawData.api_p[i]) + " hPa";
+                document.getElementById('api-w').innerText = rawData.api_w[i].toFixed(1) + " km/h";
+                document.getElementById('api-r').innerText = rawData.api_r[i] > 0 ? "Eső" : "Nincs";
+
+                document.getElementById('delta-t').innerText = "Δ " + (rawData.temp[i] - rawData.api_t[i]).toFixed(1);
+                document.getElementById('delta-h').innerText = "Δ " + (rawData.hum[i] - rawData.api_h[i]).toFixed(0) + "%";
+            }
+
+            const slice = activeFilter === 'today' ? 24 : (activeFilter === 'weekly' ? 168 : l);
+            const lbl = rawData.ts.slice(-slice).map(t => t.split(' ')[1].substring(0,5));
+
+            drawDoubleChart("tempChart", lbl, rawData.temp.slice(-slice), rawData.api_t.slice(-slice), '#f87171');
+            drawDoubleChart("humChart", lbl, rawData.hum.slice(-slice), rawData.api_h.slice(-slice), '#38bdf8');
+            drawDoubleChart("windChart", lbl, rawData.wind.slice(-slice), rawData.api_w.slice(-slice), '#a78bfa');
+            drawDoubleChart("rainChart", lbl, rawData.rain.slice(-slice), rawData.api_r.slice(-slice), '#60a5fa');
+            drawDoubleChart("pressChart", lbl, rawData.press.slice(-slice), rawData.api_p.slice(-slice), '#fbbf24');
+            drawSingleChart("gasChart", lbl, rawData.gas.slice(-slice), '#4ade80');
+        }
+
+        function drawDoubleChart(id, labels, dLocal, dApi, color) {
+            if (charts[id]) charts[id].destroy();
+            const ctx = document.getElementById(id).getContext('2d');
+            const grad = ctx.createLinearGradient(0, 0, 0, 180);
+            grad.addColorStop(0, color.replace(')', ', 0.2)')); grad.addColorStop(1, 'transparent');
+
+            charts[id] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Szenzor', data: dLocal, borderColor: color, borderWidth: 2, tension: 0.4, pointRadius: 0, fill: true, backgroundColor: grad },
+                        { label: 'API', data: dApi, borderColor: color, borderDash: [5, 5], borderWidth: 1, tension: 0.4, pointRadius: 0, fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 6 } },
+                        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9 } } }
+                    }
+                }
+            });
+        }
+
+        function drawSingleChart(id, labels, data, color) {
+            if (charts[id]) charts[id].destroy();
+            const ctx = document.getElementById(id).getContext('2d');
+            charts[id] = new Chart(ctx, {
+                type: 'line',
+                data: { labels: labels, datasets: [{ data: data, borderColor: color, borderWidth: 2, tension: 0.4, pointRadius: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.03)' } } } }
+            });
         }
 
         function setFilter(f, btn) {
@@ -146,91 +237,6 @@
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             refreshUI();
-        }
-
-        function getAverages(arr, timestamps) {
-            const daily = {};
-            timestamps.forEach((ts, i) => {
-                const date = ts.split(' ')[0];
-                if (!daily[date]) daily[date] = { s: 0, c: 0 };
-                daily[date].s += arr[i];
-                daily[date].c++;
-            });
-            return Object.keys(daily).map(d => {
-                const dt = new Date(d);
-                return { label: (dt.getMonth()+1) + "." + dt.getDate(), val: daily[d].s / daily[d].c };
-            });
-        }
-
-        function refreshUI() {
-            if (!rawData) return;
-            const l = rawData.ts.length;
-
-            // Élő adatok frissítése
-            document.getElementById('t-t').innerText = rawData.temp[l-1].toFixed(1) + "°C";
-            document.getElementById('t-h').innerText = rawData.hum[l-1].toFixed(1) + "%";
-            document.getElementById('t-p').innerText = Math.round(rawData.press[l-1]) + " hPa";
-            document.getElementById('t-g').innerText = Math.round(rawData.gas[l-1]/1000) + "k";
-            document.getElementById('t-r').innerText = rawData.rain[l-1] > 50 ? "🌧️" : "☀️";
-            document.getElementById('t-w').innerText = rawData.wind[l-1].toFixed(1) + " km/h";
-
-            let lbl, temp, hum, press, gas, rain, wind;
-            const latestDate = new Date(rawData.ts[l-1]);
-            const monthLabel = activeFilter === 'monthly' ? months[latestDate.getMonth()] : (activeFilter === 'all' ? "Mind" : "Élő");
-            document.querySelectorAll('.month-name').forEach(el => el.innerText = monthLabel);
-
-            if (activeFilter === 'monthly') {
-                const avgT = getAverages(rawData.temp, rawData.ts);
-                lbl = avgT.map(a => a.label);
-                temp = avgT.map(a => a.val);
-                hum = getAverages(rawData.hum, rawData.ts).map(a => a.val);
-                press = getAverages(rawData.press, rawData.ts).map(a => a.val);
-                gas = getAverages(rawData.gas, rawData.ts).map(a => a.val);
-                rain = getAverages(rawData.rain, rawData.ts).map(a => a.val);
-                wind = getAverages(rawData.wind, rawData.ts).map(a => a.val);
-            } else {
-                const slice = activeFilter === 'today' ? 24 : (activeFilter === 'weekly' ? 168 : l);
-                lbl = rawData.ts.slice(-slice).map(t => t.split(' ')[1].substring(0,5));
-                temp = rawData.temp.slice(-slice);
-                hum = rawData.hum.slice(-slice);
-                press = rawData.press.slice(-slice);
-                gas = rawData.gas.slice(-slice);
-                rain = rawData.rain.slice(-slice);
-                wind = rawData.wind.slice(-slice);
-            }
-
-            drawChart("tempChart", lbl, temp, '#f87171');
-            drawChart("humChart", lbl, hum, '#38bdf8');
-            drawChart("windChart", lbl, wind, '#a78bfa');
-            drawChart("rainChart", lbl, rain, '#60a5fa');
-            drawChart("pressChart", lbl, press, '#fbbf24');
-            drawChart("gasChart", lbl, gas, '#4ade80');
-        }
-
-        function drawChart(id, labels, data, color) {
-            if (charts[id]) charts[id].destroy();
-            const ctx = document.getElementById(id).getContext('2d');
-            const grad = ctx.createLinearGradient(0, 0, 0, 180);
-            grad.addColorStop(0, color.replace('1)', '0.15)')); grad.addColorStop(1, 'transparent');
-
-            charts[id] = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data, borderColor: color, borderWidth: 2, tension: 0.4, pointRadius: 0, fill: true, backgroundColor: grad
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, autoSkip: true, maxTicksLimit: 5 } },
-                        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9 } } }
-                    }
-                }
-            });
         }
 
         updateData();
