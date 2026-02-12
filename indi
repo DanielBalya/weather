@@ -36,14 +36,12 @@
             display: grid; grid-template-columns: repeat(2, 1fr);
             gap: 10px; width: 100%; max-width: 1100px; margin-bottom: 20px;
         }
-
         @media (min-width: 768px) { .live-stats { grid-template-columns: repeat(6, 1fr); } }
 
         .stat-item {
             background: var(--card-bg); padding: 12px; border-radius: 14px;
             text-align: center; border: 1px solid rgba(255,255,255,0.05);
         }
-
         .stat-value { font-size: 1.1rem; font-weight: 600; display: block; margin-top: 3px; }
         .stat-label { font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
         .delta-val { font-size: 0.65rem; margin-top: 4px; font-weight: bold; display: block; opacity: 0.8; }
@@ -53,20 +51,17 @@
             background: var(--card-bg); padding: 5px; border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.05);
         }
-
         .filter-btn {
             background: transparent; border: none; color: var(--text-dim);
             padding: 8px 12px; border-radius: 8px; cursor: pointer;
             font-size: 0.75rem; font-weight: 600; transition: 0.2s;
         }
-
         .filter-btn.active { background: var(--primary); color: white; }
 
         .dashboard-grid {
             display: grid; grid-template-columns: 1fr;
             gap: 15px; width: 100%; max-width: 1100px;
         }
-
         @media (min-width: 600px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (min-width: 1000px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); } }
 
@@ -75,20 +70,14 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
             display: flex; flex-direction: column;
         }
-
-        h2 { 
-            font-size: 0.7rem; font-weight: 600; color: var(--text-dim); 
-            margin: 0 0 12px 0; text-transform: uppercase; 
-            display: flex; justify-content: space-between;
-        }
-
-        .month-name { color: var(--primary); font-size: 0.7rem; }
+        h2 { font-size: 0.7rem; font-weight: 600; color: var(--text-dim); margin: 0 0 12px 0; text-transform: uppercase; display: flex; justify-content: space-between; }
+        .chart-badge { color: var(--primary); font-size: 0.7rem; }
         .canvas-container { position: relative; height: 180px; width: 100%; }
     </style>
 </head>
 <body>
 
-    <div class="header"><h1>Balya Dániel időjárás raspberrypi 4</h1></div>
+    <div class="header"><h1>Balya Dániel RaspberryPi Időjárás Állomás</h1></div>
 
     <div class="live-stats">
         <div class="stat-item"><span class="stat-label">Hőfok</span><span id="t-t" class="stat-value" style="color:var(--accent-temp)">--</span></div>
@@ -110,9 +99,11 @@
             <span class="stat-label">API Nyomás</span><span id="api-p" class="stat-value" style="color:var(--accent-press)">--</span>
             <span id="delta-p" class="delta-val" style="color:var(--accent-press)"></span>
         </div>
-        <div class="stat-item"><span class="stat-label">VOC</span><span class="stat-value" style="color:var(--accent-gas)">STABIL</span></div>
+        <div class="stat-item"><span class="stat-label">API Gáz</span><span class="stat-value" style="color:var(--accent-gas)">Nincs adat</span></div>
         <div class="stat-item"><span class="stat-label">API Eső</span><span id="api-r" class="stat-value" style="color:var(--accent-rain)">--</span></div>
         <div class="stat-item"><span class="stat-label">API Szél</span><span id="api-w" class="stat-value" style="color:var(--accent-wind)">--</span></div>
+	    <span id="delta-w" class="delta-val" style="color:var(--accent-wind)"></span>
+        </div>
     </div>
 
     <div class="filter-container">
@@ -123,12 +114,12 @@
     </div>
 
     <div class="dashboard-grid">
-        <div class="chart-card"><h2>Hőmérséklet (°C) <span class="month-name" id="m-temp"></span></h2><div class="canvas-container"><canvas id="tempChart"></canvas></div></div>
-        <div class="chart-card"><h2>Páratartalom (%) <span class="month-name" id="m-hum"></span></h2><div class="canvas-container"><canvas id="humChart"></canvas></div></div>
-        <div class="chart-card"><h2>Szélsebesség (km/h) <span class="month-name" id="m-wind"></span></h2><div class="canvas-container"><canvas id="windChart"></canvas></div></div>
-        <div class="chart-card"><h2>Eső Intenzitás <span class="month-name" id="m-rain"></span></h2><div class="canvas-container"><canvas id="rainChart"></canvas></div></div>
-        <div class="chart-card"><h2>Légnyomás (hPa) <span class="month-name" id="m-press"></span></h2><div class="canvas-container"><canvas id="pressChart"></canvas></div></div>
-        <div class="chart-card"><h2>Gázellenállás (kΩ) <span class="month-name" id="m-gas"></span></h2><div class="canvas-container"><canvas id="gasChart"></canvas></div></div>
+        <div class="chart-card"><h2>Hőmérséklet (°C) <span class="chart-badge" id="m-temp"></span></h2><div class="canvas-container"><canvas id="tempChart"></canvas></div></div>
+        <div class="chart-card"><h2>Páratartalom (%) <span class="chart-badge" id="m-hum"></span></h2><div class="canvas-container"><canvas id="humChart"></canvas></div></div>
+        <div class="chart-card"><h2>Szélsebesség (km/h) <span class="chart-badge" id="m-wind"></span></h2><div class="canvas-container"><canvas id="windChart"></canvas></div></div>
+        <div class="chart-card"><h2>Eső Intenzitás <span class="chart-badge" id="m-rain"></span></h2><div class="canvas-container"><canvas id="rainChart"></canvas></div></div>
+        <div class="chart-card"><h2>Légnyomás (hPa) <span class="chart-badge" id="m-press"></span></h2><div class="canvas-container"><canvas id="pressChart"></canvas></div></div>
+        <div class="chart-card"><h2>Gáz (kΩ) <span class="chart-badge" id="m-gas"></span></h2><div class="canvas-container"><canvas id="gasChart"></canvas></div></div>
     </div>
 
     <script>
@@ -141,7 +132,6 @@
             try {
                 const response = await fetch("/api/data");
                 const data = await response.json();
-                
                 rawData = {
                     ts: data.timestamps.reverse(),
                     temp: data.temperature.reverse(),
@@ -157,7 +147,38 @@
                     api_r: data.rain_out ? data.rain_out.reverse() : []
                 };
                 refreshUI();
-            } catch (e) { console.error("Hiba az adatokkal", e); }
+            } catch (e) { console.error(e); }
+        }
+
+        function calculateDailyAverages(indices) {
+            const dailyData = {};
+            indices.forEach(idx => {
+                const date = rawData.ts[idx].split(' ')[0];
+                if (!dailyData[date]) dailyData[date] = { t: [], h: [], p: [], w: [], r: [], g: [], at: [], ah: [], ap: [], aw: [], ar: [] };
+                dailyData[date].t.push(rawData.temp[idx]);
+                dailyData[date].h.push(rawData.hum[idx]);
+                dailyData[date].p.push(rawData.press[idx]);
+                dailyData[date].w.push(rawData.wind[idx]);
+                dailyData[date].r.push(rawData.rain[idx]);
+                dailyData[date].g.push(rawData.gas[idx]);
+                if (rawData.api_t[idx] !== null) dailyData[date].at.push(rawData.api_t[idx]);
+                if (rawData.api_h[idx] !== null) dailyData[date].ah.push(rawData.api_h[idx]);
+                if (rawData.api_p[idx] !== null) dailyData[date].ap.push(rawData.api_p[idx]);
+                if (rawData.api_w[idx] !== null) dailyData[date].aw.push(rawData.api_w[idx]);
+                if (rawData.api_r[idx] !== null) dailyData[date].ar.push(rawData.api_r[idx]);
+            });
+            const result = { labels: [], temp: [], hum: [], press: [], wind: [], rain: [], gas: [], api_t: [], api_h: [], api_p: [], api_w: [], api_r: [] };
+            const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+            Object.keys(dailyData).sort().forEach(date => {
+                result.labels.push(date.split('-').slice(1).reverse().join('.'));
+                result.temp.push(avg(dailyData[date].t)); result.hum.push(avg(dailyData[date].h));
+                result.press.push(avg(dailyData[date].p)); result.wind.push(avg(dailyData[date].w));
+                result.rain.push(avg(dailyData[date].r)); result.gas.push(avg(dailyData[date].g));
+                result.api_t.push(avg(dailyData[date].at)); result.api_h.push(avg(dailyData[date].ah));
+                result.api_p.push(avg(dailyData[date].ap)); result.api_w.push(avg(dailyData[date].aw));
+                result.api_r.push(avg(dailyData[date].ar));
+            });
+            return result;
         }
 
         function refreshUI() {
@@ -165,70 +186,115 @@
             const l = rawData.ts.length;
             const i = l - 1;
 
-            // SZENZOROK
             document.getElementById('t-t').innerText = rawData.temp[i].toFixed(1) + "°C";
             document.getElementById('t-h').innerText = rawData.hum[i].toFixed(1) + "%";
             document.getElementById('t-p').innerText = Math.round(rawData.press[i]) + " hPa";
-            document.getElementById('t-g').innerText = Math.round(rawData.gas[i]/1000) + "k";
+            document.getElementById('t-g').innerText = (rawData.gas[i]/1000).toFixed(0) + "k";
             document.getElementById('t-r').innerText = rawData.rain[i] > 50 ? "🌧️" : "☀️";
             document.getElementById('t-w').innerText = rawData.wind[i].toFixed(1) + " km/h";
 
-            // API ADATOK
             if(rawData.api_t[i] !== undefined) {
                 document.getElementById('api-t').innerText = rawData.api_t[i].toFixed(1) + "°C";
                 document.getElementById('api-h').innerText = rawData.api_h[i].toFixed(1) + "%";
                 document.getElementById('api-p').innerText = Math.round(rawData.api_p[i]) + " hPa";
                 document.getElementById('api-w').innerText = rawData.api_w[i].toFixed(1) + " km/h";
                 document.getElementById('api-r').innerText = rawData.api_r[i] > 0 ? "Eső" : "Nincs";
-
                 document.getElementById('delta-t').innerText = "Δ " + (rawData.temp[i] - rawData.api_t[i]).toFixed(1);
                 document.getElementById('delta-h').innerText = "Δ " + (rawData.hum[i] - rawData.api_h[i]).toFixed(0) + "%";
             }
 
-            const slice = activeFilter === 'today' ? 24 : (activeFilter === 'weekly' ? 168 : l);
-            const lbl = rawData.ts.slice(-slice).map(t => t.split(' ')[1].substring(0,5));
+            let chartData = { labels: [], t: [], h: [], w: [], r: [], p: [], g: [], at: [], ah: [], aw: [], ar: [], ap: [] };
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
 
-            drawDoubleChart("tempChart", lbl, rawData.temp.slice(-slice), rawData.api_t.slice(-slice), '#f87171');
-            drawDoubleChart("humChart", lbl, rawData.hum.slice(-slice), rawData.api_h.slice(-slice), '#38bdf8');
-            drawDoubleChart("windChart", lbl, rawData.wind.slice(-slice), rawData.api_w.slice(-slice), '#a78bfa');
-            drawDoubleChart("rainChart", lbl, rawData.rain.slice(-slice), rawData.api_r.slice(-slice), '#60a5fa');
-            drawDoubleChart("pressChart", lbl, rawData.press.slice(-slice), rawData.api_p.slice(-slice), '#fbbf24');
-            drawSingleChart("gasChart", lbl, rawData.gas.slice(-slice), '#4ade80');
+            if (activeFilter === 'today') {
+                const indices = rawData.ts.map((t, idx) => t.startsWith(todayStr) ? idx : -1).filter(i => i !== -1);
+                chartData.labels = indices.map(idx => rawData.ts[idx].split(' ')[1].substring(0, 5));
+                chartData.t = indices.map(idx => rawData.temp[idx]); chartData.h = indices.map(idx => rawData.hum[idx]);
+                chartData.w = indices.map(idx => rawData.wind[idx]); chartData.r = indices.map(idx => rawData.rain[idx]);
+                chartData.p = indices.map(idx => rawData.press[idx]); chartData.g = indices.map(idx => rawData.gas[idx] / 1000);
+                chartData.at = indices.map(idx => rawData.api_t[idx]); chartData.ah = indices.map(idx => rawData.api_h[idx]);
+                chartData.aw = indices.map(idx => rawData.api_w[idx]); chartData.ar = indices.map(idx => rawData.api_r[idx]);
+                chartData.ap = indices.map(idx => rawData.api_p[idx]);
+                document.querySelectorAll('.chart-badge').forEach(el => el.innerText = "MA");
+            } 
+            else if (activeFilter === 'weekly' || activeFilter === 'monthly') {
+                let filteredIndices = [];
+                if (activeFilter === 'weekly') {
+                    const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(now.getDate() - 7);
+                    filteredIndices = rawData.ts.map((t, idx) => new Date(t) >= sevenDaysAgo ? idx : -1).filter(i => i !== -1);
+                    document.querySelectorAll('.chart-badge').forEach(el => el.innerText = "7 NAP (ÁTLAG)");
+                } else {
+                    filteredIndices = rawData.ts.map((t, idx) => new Date(t).getMonth() === now.getMonth() ? idx : -1).filter(i => i !== -1);
+                    document.querySelectorAll('.chart-badge').forEach(el => el.innerText = months[now.getMonth()].toUpperCase() + " (ÁTLAG)");
+                }
+                const avgs = calculateDailyAverages(filteredIndices);
+                chartData.labels = avgs.labels; chartData.t = avgs.temp; chartData.h = avgs.hum; chartData.w = avgs.wind; 
+                chartData.r = avgs.rain; chartData.p = avgs.press; chartData.g = avgs.gas.map(v => v/1000);
+                chartData.at = avgs.api_t; chartData.ah = avgs.api_h; chartData.aw = avgs.api_w; chartData.ar = avgs.api_r; chartData.ap = avgs.api_p;
+            } 
+            else {
+                chartData.labels = rawData.ts.map(t => t.split(' ')[0].split('-').slice(1).reverse().join('.'));
+                chartData.t = rawData.temp; chartData.h = rawData.hum; chartData.w = rawData.wind;
+                chartData.r = rawData.rain; chartData.p = rawData.press; chartData.g = rawData.gas.map(v => v/1000);
+                chartData.at = rawData.api_t; chartData.ah = rawData.api_h; chartData.aw = rawData.api_w;
+                chartData.ar = rawData.api_r; chartData.ap = rawData.api_p;
+                document.querySelectorAll('.chart-badge').forEach(el => el.innerText = "ÖSSZES");
+            }
+
+            drawChart("tempChart", chartData.labels, chartData.t, chartData.at, 'rgba(248, 113, 113');
+            drawChart("humChart", chartData.labels, chartData.h, chartData.ah, 'rgba(56, 189, 248');
+            drawChart("windChart", chartData.labels, chartData.w, chartData.aw, 'rgba(167, 139, 250');
+            drawChart("rainChart", chartData.labels, chartData.r, chartData.ar, 'rgba(96, 165, 250');
+            drawChart("pressChart", chartData.labels, chartData.p, chartData.ap, 'rgba(251, 191, 36');
+            drawChart("gasChart", chartData.labels, chartData.g, null, 'rgba(74, 222, 128', true);
         }
 
-        function drawDoubleChart(id, labels, dLocal, dApi, color) {
+        function drawChart(id, labels, dLocal, dApi, colorBase, isSingle = false) {
             if (charts[id]) charts[id].destroy();
             const ctx = document.getElementById(id).getContext('2d');
-            const grad = ctx.createLinearGradient(0, 0, 0, 180);
-            grad.addColorStop(0, color.replace(')', ', 0.2)')); grad.addColorStop(1, 'transparent');
+            
+            // Gradient létrehozása
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, colorBase + ', 0.4)'); // Sötétebb felül
+            gradient.addColorStop(1, colorBase + ', 0)');   // Átlátszó alul
+
+            const datasets = [{
+                label: 'Szenzor',
+                data: dLocal,
+                borderColor: colorBase + ', 1)',
+                borderWidth: 2,
+                tension: 0.3,
+                pointRadius: 0,
+                fill: true,
+                backgroundColor: gradient
+            }];
+
+            if (!isSingle) {
+                datasets.push({
+                    label: 'API',
+                    data: dApi,
+                    borderColor: colorBase + ', 0.6)',
+                    borderDash: [5, 5],
+                    borderWidth: 1,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    fill: false
+                });
+            }
 
             charts[id] = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Szenzor', data: dLocal, borderColor: color, borderWidth: 2, tension: 0.4, pointRadius: 0, fill: true, backgroundColor: grad },
-                        { label: 'API', data: dApi, borderColor: color, borderDash: [5, 5], borderWidth: 1, tension: 0.4, pointRadius: 0, fill: false }
-                    ]
-                },
+                data: { labels: labels, datasets: datasets },
                 options: {
                     responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 6 } },
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 8 } },
                         y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9 } } }
                     }
                 }
-            });
-        }
-
-        function drawSingleChart(id, labels, data, color) {
-            if (charts[id]) charts[id].destroy();
-            const ctx = document.getElementById(id).getContext('2d');
-            charts[id] = new Chart(ctx, {
-                type: 'line',
-                data: { labels: labels, datasets: [{ data: data, borderColor: color, borderWidth: 2, tension: 0.4, pointRadius: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.03)' } } } }
             });
         }
 
